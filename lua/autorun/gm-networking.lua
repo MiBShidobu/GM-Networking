@@ -1,5 +1,5 @@
 --[[
-    GM-Networking By MiBShidobu
+    GM-Networking Library By MiBShidobu
 
     Description:
         This addon provides an OOP wrapper and modeling solution for the net library, for simplified usage.
@@ -10,7 +10,7 @@
 
     Credits:
         MiBShidobu - Main Developer
-        In-line credits - Developers who constructed a function or single bits of code I'm using, credited in-line at their functions. ... if I can remember
+        In-line credits - Developers who constructed a function or single bits of code I'm using, credited in-line at their functions. ... if I can remember them...
 ]]--
 
 if SERVER then

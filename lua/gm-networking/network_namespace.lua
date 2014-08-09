@@ -164,6 +164,7 @@ end
 
 local function CalculateBitLength(number)
     -- uh, I found this algorithm on a stackoverflow answer and can't find it again. whoops
+    -- if anyone tells me, I'll update the file!
     local tbl = {}
     while number > 0 do
         rest = number % 2
