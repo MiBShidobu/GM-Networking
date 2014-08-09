@@ -52,6 +52,8 @@ end
     State: SHARED
 ]]--
 
+local START = string.char(2)
+
 function BUFFER:Deserialize()
     if self.buffer then
         error("GM-Networking: Buffer is write-only!")
