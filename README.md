@@ -10,5 +10,5 @@ This addon provides an OOP wrapper and modeling solution for the net library, fo
 To expand upon the 'NetworkMessage' object, use FindMetaTable with the parameter 'NetworkMessage' and extend it would like any other metatable. You can do the same with the 'NetworkBuffer' and 'NetworkModel' objects aswell.
 
 ## Credits: ##
-[MiBShidobu](http://steamcommunity.com/profiles/76561197967808946) - Main Developer
+[MiBShidobu](http://steamcommunity.com/profiles/76561197967808946) - Main Developer<br />
 In-line credits - Developers who constructed a function or single bits of code I'm using, credited in-line at their functions. ... if I can remember them...
