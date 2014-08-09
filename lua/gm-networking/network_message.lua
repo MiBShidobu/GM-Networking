@@ -62,7 +62,7 @@ function NETWORK:Send(target)
     if CLIENT then
         net.SendToServer()
     else
-        if value == nil then
+        if target == nil then
             net.Broadcast()
 
         else
