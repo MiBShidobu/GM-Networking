@@ -45,29 +45,6 @@ function network.GetNetworkType(value)
 end
 
 --[[
-    Name: ValidTable(table Table)
-    Desc: Returns if the table is sequantial regardless if all the keys are numbers or not.
-    State: SHARED/LOCAL
-]]--
-
-local function ValidTable(tbl)
-    local last = 1
-    for key, value in pairs(tbl) do
-        if type(key) ~= "number" then
-            continue
-        end
-
-        if key ~= last then
-            return false
-        end
-
-        last = last + 1
-    end
-
-    return true
-end
-
---[[
     Name: network.Serialize(variable Value)
     Desc: Serializes the variable into a data string.
     State: SHARED
@@ -106,12 +83,17 @@ function network.Serialize(variable)
 
     elseif ntype == NETWORK_TYPE_TABLE then
         local str = START..ntype
-        local seq = ValidTable(variable)
+        local last = 0
         for key, value in pairs(variable) do
             ntype = network.GetNetworkType(value)
             if ntype ~= NETWORK_TYPE_ERROR then
-                if seq and type(key) == "number" then
-                    str = str..string.gsub(network.Serialize(value), START, START_T, 1)
+                if type(key) == "number" then
+                    if key == (last + 1) then
+                        str = str..string.gsub(network.Serialize(value), START, START_T, 1)
+
+                    else
+                        str = str..network.Serialize(key)..network.Serialize(value)
+                    end
 
                 else
                     str = str..network.Serialize(key)..network.Serialize(value)
