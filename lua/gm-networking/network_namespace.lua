@@ -45,6 +45,29 @@ function network.GetNetworkType(value)
 end
 
 --[[
+    Name: ValidTable(table Table)
+    Desc: Returns if the table is sequantial regardless if all the keys are numbers or not.
+    State: SHARED/LOCAL
+]]--
+
+local function ValidTable(tbl)
+    local last = 1
+    for key, value in pairs(tbl) do
+        if type(key) ~= "number" then
+            continue
+        end
+
+        if key ~= last then
+            return false
+        end
+
+        last = last + 1
+    end
+
+    return true
+end
+
+--[[
     Name: network.Serialize(variable Value)
     Desc: Serializes the variable into a data string.
     State: SHARED
@@ -52,6 +75,7 @@ end
 
 local START = string.char(2)
 local END = string.char(3)
+local START_T = string.char(16)
 local TERM = string.char(31)
 
 function network.Serialize(variable)
@@ -82,10 +106,16 @@ function network.Serialize(variable)
 
     elseif ntype == NETWORK_TYPE_TABLE then
         local str = START..ntype
+        local seq = ValidTable(variable)
         for key, value in pairs(variable) do
             ntype = network.GetNetworkType(value)
             if ntype ~= NETWORK_TYPE_ERROR then
-                str = str..network.Serialize(key)..network.Serialize(value)
+                if seq and type(key) == "number" then
+                    str = str..string.gsub(network.Serialize(value), START, START_T, 1)
+
+                else
+                    str = str..network.Serialize(key)..network.Serialize(value)
+                end
             end
         end
 
@@ -101,11 +131,11 @@ end
     State: SHARED/LOCAL
 ]]--
 
-function SerializedParse(str)
+local function SerializedParse(str)
     local tbl = {}
     local offset = 0
 
-    for entry in string.gmatch(str, START.."([%w%s%p]+)") do
+    for entry in string.gmatch(str, "["..START..START_T.."]+([%w%s%p]+)") do
         local start, last = string.find(str, entry, offset)
         table.insert(tbl, {
             entry,
@@ -163,17 +193,20 @@ function network.Deserialize(str, tbl)
         while #tbl > 0 do
             local ktype = table.remove(tbl, 1)
             local kvalue = table.remove(tbl, 1)
+            local position = ktype[2] - 1
+            local seq = string.sub(str, position, position) == START_T
+            local key = seq and #ret + 1 or network.Deserialize(START..ktype[1]..START..kvalue[1])
 
-            local key = network.Deserialize(START..ktype[1]..START..kvalue[1])
-            local vtype = tonumber(table.remove(tbl, 1)[1])
-            local vvalue = table.remove(tbl, 1)
-            if vtype == NETWORK_TYPE_TABLE then
+            local vtype = seq and ktype or table.remove(tbl, 1)
+            local vvalue = seq and kvalue or table.remove(tbl, 1)
+            if tonumber(vtype[1]) == NETWORK_TYPE_TABLE then
                 table.insert(tbl, 1, vvalue)
-                table.insert(tbl, 1, {vtype})
+                table.insert(tbl, 1, vtype)
+
                 ret[key] = network.Deserialize(str, tbl)
 
             else
-                ret[key] = network.Deserialize(START..vtype..START..vvalue[1])
+                ret[key] = network.Deserialize(START..vtype[1]..START..vvalue[1])
             end
 
             local position = vvalue[2] + #vvalue[1]
