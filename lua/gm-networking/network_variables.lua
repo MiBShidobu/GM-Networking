@@ -3,10 +3,6 @@
         By MiBShidobu
 ]]--
 
-if SERVER then
-    util.AddNetworkString("network_variable_dump_trans")
-end
-
 network.VariableCache = network.VariableCache or {}
 
 if SERVER then
@@ -141,42 +137,42 @@ if SERVER then
     hook.Add("PlayerInitialSpawn", "gm-networking_plyinit", function (ply)
         timer.Simple(1, function ()
             if IsValid(ply) then
-                local metadata = {}
-                for _, ent in ipairs(ents.GetAll()) do
-                    if ent._gmn then
-                        local data = {}
-                        for name, value in pairs(ent._gmn) do
-                            if ent._gmn_f and ent._gmn_f[name] then
-                                if ent._gmn_f[name](ply) then
-                                    continue
+                local message = NetworkMessage("network_variable_dump_trans")
+                    local metadata = {}
+                    for _, ent in ipairs(ents.GetAll()) do
+                        if ent._gmn then
+                            local data = {}
+                            for name, value in pairs(ent._gmn) do
+                                if ent._gmn_f and ent._gmn_f[name] then
+                                    if ent._gmn_f[name](ply) then
+                                        continue
+                                    end
                                 end
+
+                                data[name] = value
                             end
 
-                            data[name] = value
-                        end
-
-                        if #data > 0 then
-                            table.insert(metadata, {
-                                ent = ent,
-                                data = data
-                            })
+                            if #data > 0 then
+                                table.insert(metadata, {
+                                    ent = ent,
+                                    data = data
+                                })
+                            end
                         end
                     end
-                end
 
-                local cache = {}
-                for name, value in pairs(network.VariableCache) do
-                    if network.VariableFuncs[name] and network.VariableFuncs[name](ply) then
-                        continue
+                    message:Write(metadata)
+                    metadata = {}
+                    for name, value in pairs(network.VariableCache) do
+                        if network.VariableFuncs[name] and network.VariableFuncs[name](ply) then
+                            continue
+                        end
+
+                        metadata[name] = value
                     end
 
-                    cache[name] = value
-                end
-
-                net.Start("network_variable_dump_trans")
-                    net.WriteTable(cache)
-                    net.WriteTable(metadata)
-                net.Send(ply)
+                    message:Write(metadata)
+                message:Send(ply)
             end
         end)
     end)
@@ -201,10 +197,8 @@ if CLIENT then
         end
     end)
 
-    net.Receive("network_variable_dump_trans", function (length, ply)
-        network.VariableCache = net.ReadTable()
-
-        local metadata = net.ReadTable()
+    network.HookMessage("network_variable_dump_trans", function (length, ply, variables, metadata)
+        network.VariableCache = variables
         for _, data in ipairs(metadata) do
             if IsValid(data.ent) then
                 data.ent._gmn = data.data

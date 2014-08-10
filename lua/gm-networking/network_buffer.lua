@@ -13,6 +13,16 @@ BUFFER.__index = BUFFER
 debug.getregistry().NetworkBuffer = BUFFER
 
 --[[
+    Name: IsNetworkBuffer(variable Value)
+    Desc: Returns if the variable is a 'NetworkBuffer'.
+    State: SHARED
+]]--
+
+function IsNetworkBuffer(value)
+    return type(value) == "table" and getmetatable(value) == BUFFER
+end
+
+--[[
     Name: NetworkBuffer(string Serialized Buffer)
     Desc: Returns a write-only buffer if no string is passed. If a string is passed using the serialization format, returns a read-only buffer.
     State: SHARED
@@ -26,9 +36,7 @@ function NetworkBuffer(data)
 
     end
 
-    return setmetatable({
-        buffer = ""
-    }, BUFFER)
+    return setmetatable({}, BUFFER)
 end
 
 --[[
@@ -37,12 +45,20 @@ end
     State: SHARED
 ]]--
 
+local SEP = string.char(23)
+
 function BUFFER:Write(value)
     if self.data then
         error("GM-Networking: Buffer is read-only!")
     end
 
-    self.buffer = self.buffer..network.Serialize(value)
+    if self.buffer then
+        self.buffer = self.buffer..SEP..network.Serialize(value)
+
+    else
+        self.buffer = network.Serialize(value)
+    end
+
     return self
 end
 
@@ -52,23 +68,15 @@ end
     State: SHARED
 ]]--
 
-local START = string.char(2)
-
 function BUFFER:Deserialize()
-    if self.buffer then
+    if not self.data then
         error("GM-Networking: Buffer is write-only!")
     end
 
     if not self.tbl then
         self.tbl = {}
-        local extracted = {}
-
-        for match in string.gmatch(self.data, START.."([%w%s%p]+)") do
-            table.insert(extracted, match)
-        end
-
-        while #extracted > 0 do
-            table.insert(self.tbl, network.Deserialize(START..table.remove(extracted, 1)..START..table.remove(extracted, 1)))
+        for _, item in ipairs(string.Explode(SEP, self.data)) do
+            table.insert(self.tbl, network.Deserialize(item))
         end
     end
 
@@ -86,7 +94,13 @@ function BUFFER:Serialize()
         error("GM-Networking: Buffer is read-only!")
     end
 
-    return util.Compress(self.buffer)
+    local count = #self.buffer
+    if not self.compressed or count > self.compressed_c then
+        self.compressed = util.Compress(self.buffer)
+        self.compressed_c = count
+    end
+
+    return self.compressed
 end
 
 --[[

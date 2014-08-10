@@ -36,6 +36,9 @@ function network.GetNetworkType(value)
 
     elseif type == "vector" then
         return NETWORK_TYPE_VECTOR
+
+    elseif type == "table" then
+        return NETWORK_TYPE_TABLE
     end
 
     return NETWORK_TYPE_ERROR
@@ -48,67 +51,91 @@ end
 ]]--
 
 local START = string.char(2)
+local END = string.char(3)
+local TERM = string.char(31)
 
-function network.Serialize(value)
-    local type = network.GetNetworkType(value)
-    if type == NETWORK_TYPE_NIL then
-        return START..value..START.."0"
+function network.Serialize(variable)
+    local ntype = network.GetNetworkType(variable)
+    if ntype == NETWORK_TYPE_NIL then
+        return START..ntype..START.."0"
 
-    elseif type == NETWORK_TYPE_ANGLE then
-        return START..type..START..tostring(value)
+    elseif ntype == NETWORK_TYPE_ANGLE then
+        return START..ntype..START..variable.pitch..TERM..variable.yaw..variable.roll
 
-    elseif type == NETWORK_TYPE_BOOLEAN then
-        return START..type..START..(value and 1 or 0)
+    elseif ntype == NETWORK_TYPE_BOOLEAN then
+        return START..ntype..START..(variable and 1 or 0)
 
-    elseif type == NETWORK_TYPE_COLOR then
-        return START..type..START..string.upper(string.format("%02x%02x%02x%02x", value.r, value.g, value.b, value.a or 255))
+    elseif ntype == NETWORK_TYPE_COLOR then
+        return START..ntype..START..string.upper(string.format("%02x%02x%02x%02x", variable.r, variable.g, variable.b, variable.a or 255))
 
-    elseif type == NETWORK_TYPE_ENTITY then
-        return START..type..START..(IsValid(value) and value:EntIndex() or -1)
+    elseif ntype == NETWORK_TYPE_ENTITY then
+        return START..ntype..START..(IsValid(variable) and variable:EntIndex() or -1)
 
-    elseif type == NETWORK_TYPE_NUMBER then
-        return START..type..START..value
+    elseif ntype == NETWORK_TYPE_NUMBER then
+        return START..ntype..START..variable
 
-    elseif type == NETWORK_TYPE_STRING then
-        return START..type..START..value
+    elseif ntype == NETWORK_TYPE_STRING then
+        return START..ntype..START..variable
 
-    elseif type == NETWORK_TYPE_VECTOR then
-        return START..type..START..tostring(value)
+    elseif ntype == NETWORK_TYPE_VECTOR then
+        return START..ntype..START..variable.x..TERM..variable.y..TERM..variable.z
+
+    elseif ntype == NETWORK_TYPE_TABLE then
+        local str = START..ntype
+        for key, value in pairs(variable) do
+            ntype = network.GetNetworkType(value)
+            if ntype ~= NETWORK_TYPE_ERROR then
+                str = str..network.Serialize(key)..network.Serialize(value)
+            end
+        end
+
+        return str..END
     end
 
     error("GM-Networking: Variable is unsupported")
 end
 
 --[[
-    Name: MatchesToRet(string String, string Search)
-    Desc: Matches the String with Search and returns the results are function returns.
+    Name: SerializedParse(string String)
+    Desc: Parses a serialized string.
     State: SHARED/LOCAL
 ]]--
 
-local function MatchesToRet(str, search)
+function SerializedParse(str)
     local tbl = {}
-    for word in string.gmatch(str, search) do
-        table.insert(tbl, word)
+    local offset = 0
+
+    for entry in string.gmatch(str, START.."([%w%s%p]+)") do
+        local start, last = string.find(str, entry, offset)
+        table.insert(tbl, {
+            entry,
+            start
+        })
+
+        offset = last + 1
     end
 
-    return unpack(tbl)
+    return tbl
 end
 
 --[[
-    Name: network.Deserialize(string Data String)
+    Name: network.Deserialize(string Data String, table Parsed Table)
     Desc: Deserializes the data string into a variable proper.
     State: SHARED
 ]]--
 
-function network.Deserialize(str)
-    local type, raw = MatchesToRet(str, START.."([%w%s%p]+)")
-    type = tonumber(type)
+function network.Deserialize(str, tbl)
+    tbl = tbl or SerializedParse(str)
+    local type, raw = tonumber(table.remove(tbl, 1)[1]), nil
+    if type ~= NETWORK_TYPE_TABLE then
+        raw = table.remove(tbl, 1)[1]
+    end
 
     if type == NETWORK_TYPE_NIL then
         return nil
 
     elseif type == NETWORK_TYPE_ANGLE then
-        local values = string.Explode(" ", raw)
+        local values = string.Explode(TERM, raw)
         return Angle(tonumber(values[1]), tonumber(values[2]), tonumber(values[3]))
 
     elseif type == NETWORK_TYPE_BOOLEAN then
@@ -128,8 +155,34 @@ function network.Deserialize(str)
         return raw
 
     elseif type == NETWORK_TYPE_VECTOR then
-        local values = string.Explode(" ", raw)
+        local values = string.Explode(TERM, raw)
         return Vector(tonumber(values[1]), tonumber(values[2]), tonumber(values[3]))
+
+    elseif type == NETWORK_TYPE_TABLE then
+        local ret = {}
+        while #tbl > 0 do
+            local ktype = table.remove(tbl, 1)
+            local kvalue = table.remove(tbl, 1)
+
+            local key = network.Deserialize(START..ktype[1]..START..kvalue[1])
+            local vtype = tonumber(table.remove(tbl, 1)[1])
+            local vvalue = table.remove(tbl, 1)
+            if vtype == NETWORK_TYPE_TABLE then
+                table.insert(tbl, 1, vvalue)
+                table.insert(tbl, 1, {vtype})
+                ret[key] = network.Deserialize(str, tbl)
+
+            else
+                ret[key] = network.Deserialize(START..vtype..START..vvalue[1])
+            end
+
+            local position = vvalue[2] + #vvalue[1]
+            if string.sub(str, position, position) == END then
+                break
+            end
+        end
+
+        return ret
     end
 
     error("GM-Networking: Variable is unsupported")
