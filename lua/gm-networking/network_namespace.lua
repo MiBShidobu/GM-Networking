@@ -84,7 +84,7 @@ function network.Serialize(variable)
         return START..ntype..START.."0"
 
     elseif ntype == NETWORK_TYPE_ANGLE then
-        return START..ntype..START..variable.pitch..TERM..variable.yaw..variable.roll
+        return START..ntype..START..variable.pitch..TERM..variable.yaw..TERM..variable.roll
 
     elseif ntype == NETWORK_TYPE_BOOLEAN then
         return START..ntype..START..(variable and 1 or 0)
@@ -135,7 +135,7 @@ local function SerializedParse(str)
     local tbl = {}
     local offset = 0
 
-    for entry in string.gmatch(str, "["..START..START_T.."]+([%w%s%p]+)") do
+    for entry in string.gmatch(str, "["..START..START_T.."]+([%w%s%p"..TERM.."]+)") do
         local start, last = string.find(str, entry, offset)
         table.insert(tbl, {
             entry,
@@ -186,7 +186,7 @@ function network.Deserialize(str, tbl)
 
     elseif type == NETWORK_TYPE_VECTOR then
         local values = string.Explode(TERM, raw)
-        return Vector(tonumber(values[1]), tonumber(values[2]), tonumber(values[3]))
+        return Angle(tonumber(values[1]), tonumber(values[2]), tonumber(values[3]))
 
     elseif type == NETWORK_TYPE_TABLE then
         local ret = {}
