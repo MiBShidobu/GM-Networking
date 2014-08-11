@@ -130,59 +130,60 @@ if SERVER then
 end
 
 --[[
-    Registering game hooks.
+    Registering server net receivers.
 ]]--
 
 if SERVER then
-    hook.Add("PlayerInitialSpawn", "gm-networking_plyinit", function (ply)
-        timer.Simple(1, function ()
-            if IsValid(ply) then
-                local message = NetworkMessage("network_variable_dump_trans")
-                    local metadata = {}
-                    for _, ent in ipairs(ents.GetAll()) do
-                        if ent._gmn then
-                            local data = {}
-                            for name, value in pairs(ent._gmn) do
-                                if ent._gmn_f and ent._gmn_f[name] then
-                                    if ent._gmn_f[name](ply) then
-                                        continue
-                                    end
+    network.HookMessage("network_variable_dump_trans", function (length, ply)
+        if IsValid(ply) then
+            local message = NetworkMessage("network_variable_dump_trans")
+                local metadata = {}
+                for _, ent in ipairs(ents.GetAll()) do
+                    if ent._gmn then
+                        local data = {}
+                        for name, value in pairs(ent._gmn) do
+                            if ent._gmn_f and ent._gmn_f[name] then
+                                if ent._gmn_f[name](ply) then
+                                    continue
                                 end
-
-                                data[name] = value
                             end
 
-                            if #data > 0 then
-                                table.insert(metadata, {
-                                    ent = ent,
-                                    data = data
-                                })
-                            end
-                        end
-                    end
-
-                    message:Write(metadata)
-                    metadata = {}
-                    for name, value in pairs(network.VariableCache) do
-                        if network.VariableFuncs[name] and network.VariableFuncs[name](ply) then
-                            continue
+                            data[name] = value
                         end
 
-                        metadata[name] = value
+                        if #data > 0 then
+                            table.insert(metadata, {
+                                ent = ent,
+                                data = data
+                            })
+                        end
+                    end
+                end
+
+                message:Write(metadata)
+                metadata = {}
+                for name, value in pairs(network.VariableCache) do
+                    if network.VariableFuncs[name] and network.VariableFuncs[name](ply) then
+                        continue
                     end
 
-                    message:Write(metadata)
-                message:Send(ply)
-            end
-        end)
+                    metadata[name] = value
+                end
+
+                message:Write(metadata)
+            message:Send(ply)
+        end
     end)
-end
 
 --[[
-    Registering net receivers.
+    Registering client net receivers and gamemode hooks.
 ]]--
 
 if CLIENT then
+    hook.Add("InitPostEntity", "gm-networking_entinit", function ()
+        network.CallMessage("network_variable_dump_trans")
+    end)
+
     network.HookMessage("network_variable_glob_trans", function (length, ply, name, value)
         network.VariableCache[name] = value
     end)
