@@ -14,7 +14,7 @@
 ]]--
 
 if SERVER then
-    AddCSLuaFile("gm-networking/network_const.lua")
+    AddCSLuaFile("gm-networking/library/gm-serialize.lua")
     AddCSLuaFile("gm-networking/network_namespace.lua")
     AddCSLuaFile("gm-networking/network_buffer.lua")
     AddCSLuaFile("gm-networking/network_message.lua")
@@ -22,7 +22,7 @@ if SERVER then
     AddCSLuaFile("gm-networking/network_variables.lua")
 end
 
-include("gm-networking/network_const.lua")
+include("gm-networking/library/gm-serialize.lua")
 include("gm-networking/network_namespace.lua")
 include("gm-networking/network_buffer.lua")
 include("gm-networking/network_message.lua")
