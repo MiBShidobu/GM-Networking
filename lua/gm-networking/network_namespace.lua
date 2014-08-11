@@ -286,7 +286,7 @@ end
 ]]--
 
 function network.WriteVariable(value)
-    local data = network.Serialize(value)
+    local data = util.Compress(network.Serialize(value))
     net.WriteUInt(#data, 16)
     net.WriteData(data, #data)
 end
@@ -298,5 +298,5 @@ end
 ]]--
 
 function network.ReadVariable()
-    return network.Deserialize(net.ReadData(net.ReadUInt(16)))
+    return network.Deserialize(util.Decompress(net.ReadData(net.ReadUInt(16))))
 end
