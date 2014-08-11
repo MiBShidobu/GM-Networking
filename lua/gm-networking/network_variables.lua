@@ -174,6 +174,7 @@ if SERVER then
             message:Send(ply)
         end
     end)
+end
 
 --[[
     Registering client net receivers and gamemode hooks.
