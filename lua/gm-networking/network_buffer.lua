@@ -56,7 +56,7 @@ function BUFFER:Write(value)
         self.buffer = self.buffer..BUFFER_FORMAT_SEPARATOR..serialize.Encode(value)
 
     else
-        self.buffer = network.Serialize(value)
+        self.buffer = serialize.Encode(value)
     end
 
     return self
