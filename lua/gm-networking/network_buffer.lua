@@ -45,7 +45,7 @@ end
     State: SHARED
 ]]--
 
-local SEP = string.char(23)
+local BUFFER_FORMAT_SEPARATOR = string.char(30)
 
 function BUFFER:Write(value)
     if self.data then
@@ -53,7 +53,7 @@ function BUFFER:Write(value)
     end
 
     if self.buffer then
-        self.buffer = self.buffer..SEP..serialize.Encode(value)
+        self.buffer = self.buffer..BUFFER_FORMAT_SEPARATOR..serialize.Encode(value)
 
     else
         self.buffer = network.Serialize(value)
@@ -75,7 +75,7 @@ function BUFFER:Deserialize()
 
     if not self.tbl then
         self.tbl = {}
-        for _, item in ipairs(string.Explode(SEP, self.data)) do
+        for _, item in ipairs(string.Explode(BUFFER_FORMAT_SEPARATOR, self.data)) do
             table.insert(self.tbl, serialize.Decode(item))
         end
     end
