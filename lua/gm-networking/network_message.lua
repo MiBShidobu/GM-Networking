@@ -159,7 +159,7 @@ function network.CallMessage(name, target, ...)
         end
     end
 
-    CallMessage(name, target, buffer)
+    SendMessage(name, target, buffer)
 end
 
 --[[

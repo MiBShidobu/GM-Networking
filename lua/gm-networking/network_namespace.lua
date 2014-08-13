@@ -102,3 +102,39 @@ end
 function network.ReadVariable()
     return serialize.Decode(util.Decompress(net.ReadData(net.ReadUInt(16))))
 end
+
+--[[
+    Name: network.rpc.*message name*(any Variable1, any Variable2, ...)
+    Desc: Calls aliased form of network.CallMessage that sends the message to all clients/server when called. e.g. network.rpc.my_message_name("hello", "Joe")
+    State: SHARED
+]]--
+
+local RPC_NETWORK = {
+    __index = function (self, key)
+        return function (...)
+            network.CallMessage(key, nil, ...)
+        end
+    end
+}
+
+network.rpc = setmetatable({}, RPC_NETWORK)
+
+--[[
+    Name: PLAYER.rpc.*message name*(any Variable1, any Variable2, ...)
+    Desc: Calls aliased form of network.CallMessage that sends the message to all clients/server when called. e.g. ply.rpc.my_message_name("hello", "Joe")
+    State: SHARED
+]]--
+
+if SERVER then
+    hook.Add("PlayerInitialSpawn", "gm-networking_plyinit", function (ply)
+        local RPC_PLAYER = {
+            __index = function (self, key)
+                return function (...)
+                    network.CallMessage(key, ply, ...)
+                end
+            end
+        }
+
+        ply.rpc = setmetatable({}, RPC_PLAYER)
+    end)
+end
