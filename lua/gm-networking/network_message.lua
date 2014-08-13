@@ -46,21 +46,22 @@ function NETWORK:Write(value)
 end
 
 --[[
-    Name: NETWORK:Send(table Players or entity Player or nil All Players)
+    Name: SendMessage(string Name, table Players or entity Player or nil All Players, NetworkBuffer Buffer)
     Desc: Writes the buffer to the network and sends the 'NetworkMessage'.
-    State: SHARED
+    State: SHARED/LOCAL
 ]]--
 
-function NETWORK:Send(target)
+local function SendMessage(name, target, buffer)
     net.Start("network_message_trans")
-        net.WriteString(self.name)
-        net.WriteBit(self.buffer and true or false)
-        if self.buffer then
-            network.WriteBuffer(self.buffer)
+        net.WriteString(name)
+        net.WriteBit(buffer and true or false)
+        if buffer then
+            network.WriteBuffer(buffer)
         end
 
     if CLIENT then
         net.SendToServer()
+
     else
         if target == nil then
             net.Broadcast()
@@ -69,7 +70,16 @@ function NETWORK:Send(target)
             net.Send(target)
         end
     end
+end
 
+--[[
+    Name: NETWORK:Send(table Players or entity Player or nil All Players)
+    Desc: Writes the buffer to the network and sends the 'NetworkMessage'.
+    State: SHARED
+]]--
+
+function NETWORK:Send(target)
+    SendMessage(self.name, target, self.buffer)
     self.buffer = nil
 end
 
@@ -83,7 +93,8 @@ function NETWORK:Listen(func)
     network.MessageHooks[self.name] = func
 end
 
-local message = nil
+local message_name = nil
+local message_args = nil
 
 --[[
     Name: network.StartMessage(name)
@@ -92,7 +103,7 @@ local message = nil
 ]]--
 
 function network.StartMessage(name)
-    message = NetworkMessage(name)
+    message_name = name
 end
 
 --[[
@@ -101,12 +112,16 @@ end
     State: SHARED
 ]]--
 
-function network.WriteMessage(...)
-    if message then
-        message:Write(unpack({...}))
+function network.WriteMessage(value)
+    if message_name then
+        if not message_args then
+            message_args = {}
+        end
+
+        table.insert(message_args, value)
 
     else
-        error("GM-Networking: No 'NetworkMessage' intialized")
+        error("GM-Networking: 'network.StartMessage' wasn't called")
     end
 end
 
@@ -116,28 +131,35 @@ end
     State: SHARED
 ]]--
 
-function network.SendMessage(...)
-    if message then
-        message:Send(unpack({...}))
-        message = nil
+function network.SendMessage(target)
+    if message_name then
+        network.CallMessage(message_name, target, unpack(message_args or {}))
+
+        message_name = nil
+        message_args = nil
 
     else
-        error("GM-Networking: No 'NetworkMessage' intialized")
+        error("GM-Networking: 'network.StartMessage' wasn't called")
     end
 end
 
 --[[
-    Name: network.CallMessage(table Players or entity Player or nil All Players)
+    Name: network.CallMessage(string Name, table Players or entity Player or nil All Players, any Variable1, any Variable2, ...)
     Desc: Writes the buffer to the network and sends the 'NetworkMessage'.
     State: SHARED
 ]]--
 
 function network.CallMessage(name, target, ...)
-    local message = NetworkMessage(name)
-        for _, value in ipairs({...}) do
-            message:Write(value)
+    local args = {...}
+    local buffer = nil
+    if #args > 0 then
+        buffer = NetworkBuffer()
+        for _, value in ipairs(args) do
+            buffer:Write(value)
         end
-    message:Send(target)
+    end
+
+    CallMessage(name, target, buffer)
 end
 
 --[[
