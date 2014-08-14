@@ -15,26 +15,21 @@ if SERVER then
     ]]--
 
     function network.SetVariable(name, value)
-        if network.GetNetworkType(value) == NETWORK_TYPE_ERROR then
-            error("GM-Networking: Variable is unsupported")
+        network.VariableCache[name] = value
+        if network.VariableFuncs[name] then
+            local players = {}
+            for _, ply in ipairs(player.GetAll()) do
+                if not network.VariableFuncs[name](ply) then
+                    table.insert(players, ply)
+                end
+            end
+
+            if #players > 0 then
+                network.CallMessage("network_variable_glob_trans", players, name, value)
+            end
 
         else
-            network.VariableCache[name] = value
-            if network.VariableFuncs[name] then
-                local players = {}
-                for _, ply in ipairs(player.GetAll()) do
-                    if not network.VariableFuncs[name](ply) then
-                        table.insert(players, ply)
-                    end
-                end
-
-                if #players > 0 then
-                    network.CallMessage("network_variable_glob_trans", players, name, value)
-                end
-
-            else
-                network.CallMessage("network_variable_glob_trans", nil, name, value)
-            end
+            network.CallMessage("network_variable_glob_trans", nil, name, value)
         end
     end
 
@@ -68,32 +63,27 @@ local ENT = FindMetaTable("Entity")
 
 function ENT:NetworkVariable(name, value)
     if IsValid(self) then
-        if value then
+        if value ~= nil then
             if SERVER then
-                if network.GetNetworkType(value) == NETWORK_TYPE_ERROR then
-                    error("GM-Networking: Variable is unsupported")
+                if not self._gmn then
+                    self._gmn = {}
+                end
+
+                self._gmn[name] = value
+                if self._gmn_f and self._gmn_f[name] then
+                    local players = {}
+                    for _, ply in ipairs(player.GetAll()) do
+                        if not self._gmn_f[name](ply) then
+                            table.insert(players, ply)
+                        end
+                    end
+
+                    if #players > 0 then
+                        network.CallMessage("network_variable_ent_trans", players, self, name, value)
+                    end
 
                 else
-                    if not self._gmn then
-                        self._gmn = {}
-                    end
-
-                    self._gmn[name] = value
-                    if self._gmn_f and self._gmn_f[name] then
-                        local players = {}
-                        for _, ply in ipairs(player.GetAll()) do
-                            if not self._gmn_f[name](ply) then
-                                table.insert(players, ply)
-                            end
-                        end
-
-                        if #players > 0 then
-                            network.CallMessage("network_variable_ent_trans", players, self, name, value)
-                        end
-
-                    else
-                        network.CallMessage("network_variable_ent_trans", nil, self, name, value)
-                    end
+                    network.CallMessage("network_variable_ent_trans", nil, self, name, value)
                 end
 
             else
