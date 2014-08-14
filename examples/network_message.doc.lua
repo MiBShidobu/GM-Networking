@@ -44,3 +44,8 @@ network.rpc.mymessage("How are you?", Player(2), Player(2):GetPos())
 -- With also being able to send to specific players.
 local ply = Player(3)
 ply.rpc.mymessage("How are you?", Player(2), Player(2):GetPos())
+
+-- With hooking too.
+network.rpc.mymessage = function (msg, ply, position)
+    chat.AddText(Color(255, 255, 255), msg, " ", ply:Nick(), " at ", tostring(position), "?")
+end
