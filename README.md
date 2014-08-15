@@ -12,31 +12,6 @@ Given that this is a multi-file library, it can be packed a few different ways w
 Note, this addon *does* rely on [GM-Serialize](https://github.com/MiBShidobu/GM-Serialize) for 'NetworkMessage' and 'NetworkBuffer' functionality. It doesn't need to load before, but it does need to be loaded at runetime. You can use the copy located at lua/gm-networking/library/gm-serialize.lua, or get a fresh copy from the repo, IF the api is still compatible.
 
 When just picking apart API files of GM-Networking that you use for repackaging into your addon, make sure you have all the files that rely on one another.
-```
->network_namespace.lua
--->network_message.lua (network.CallMessage in RPC functionality)
----->network_buffer.lua (^)
-
->network_message.lua
--->network_buffer.lua ('NetworkBuffer' functionality)
--->network_namespace.lua (namespace declaration)
-
->network_buffer.lua
--->network_namespace.lua (namespace declaration)
----->network_message.lua (^)
-
->network_model.lua
--->network_namespace.lua (namespace declaration)
-
->network_variables.lua
--->network_namespace.lua (namespace declaration)
--->network_message.lua ('NetworkMessage' functionality)
-
->network_stream.lua
--->network_namespace.lua (namespace declaration)
--->network_buffer.lua ('NetworkBuffer' functionality)
-```
-
 
 ## Developing For: ##
 To expand upon the 'NetworkMessage' object, use FindMetaTable with the parameter 'NetworkMessage' and extend it would like any other metatable. You can do the same with the 'NetworkBuffer' and 'NetworkModel' objects aswell.
