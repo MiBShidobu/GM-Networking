@@ -7,15 +7,12 @@ GM-Networking Library By MiBShidobu
 This addon provides an OOP wrapper and modeling solution for the net library, for simplified usage.
 
 ## Packaging: ##
-Given that this is a multi-file library, it can be packed a few different ways with your addons as a dependency. You just have your users come here and download the zip, and uploading it as an addon. And if your addon loads before, just calling include("autorun/gm-networking.lua"). Or, package the lua/gm-networking/ files into a folder and just 'AddCSLuaFile/include'ing them and only using the files with the relavent API.
+Given that this is a multi-file library, it can be packed a few different ways with your addons as a dependency. No support will be provided if done in any way other than provided structure.
 
-Note, this addon *does* rely on [GM-Serialize](https://github.com/MiBShidobu/GM-Serialize) for 'NetworkMessage' and 'NetworkBuffer' functionality. It doesn't need to load before, but it does need to be loaded at runetime. You can use the copy located at lua/gm-networking/library/gm-serialize.lua, or get a fresh copy from the repo, IF the api is still compatible.
-
-When just picking apart API files of GM-Networking that you use for repackaging into your addon, make sure you have all the files that rely on one another.
+Note, this library *does* rely on [GM-Serialize](https://github.com/MiBShidobu/GM-Serialize) for serialization, if you repack this GM-Networking, use the local copy or an API compatible library/version.
 
 ## Developing For: ##
 To expand upon the 'NetworkMessage' object, use FindMetaTable with the parameter 'NetworkMessage' and extend it would like any other metatable. You can do the same with the 'NetworkBuffer' and 'NetworkModel' objects aswell.
 
 ## Credits: ##
-[MiBShidobu](http://steamcommunity.com/profiles/76561197967808946) - Main Developer<br />
-In-line credits - Developers who constructed a function or single bits of code I'm using, credited in-line at their functions. ... if I can remember them...
+[MiBShidobu](http://steamcommunity.com/profiles/76561197967808946) - Main Developer

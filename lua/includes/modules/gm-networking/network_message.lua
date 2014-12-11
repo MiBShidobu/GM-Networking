@@ -26,7 +26,7 @@ debug.getregistry().NetworkMessage = NETWORK
 
 function NetworkMessage(name)
     return setmetatable({
-        name = name
+        m_Name = name
     }, NETWORK)
 end
 
@@ -37,16 +37,16 @@ end
 ]]--
 
 function NETWORK:Write(value)
-    if not self.buffer then
-        self.buffer = NetworkBuffer()
+    if not self.m_Buffer then
+        self.m_Buffer = {}
     end
 
-    self.buffer:Write(value)
+    table.insert(self.m_Buffer, value)
     return self
 end
 
 --[[
-    Name: SendMessage(string Name, table Players or entity Player or nil All Players, NetworkBuffer Buffer)
+    Name: SendMessage(string Name, table Players or entity Player or nil All Players, table Buffer)
     Desc: Writes the buffer to the network and sends the 'NetworkMessage'.
     State: SHARED/LOCAL
 ]]--
@@ -56,7 +56,11 @@ local function SendMessage(name, target, buffer)
         net.WriteString(name)
         net.WriteBit(buffer and true or false)
         if buffer then
-            network.WriteBuffer(buffer)
+            local encoded = serialize.Encode(buffer)
+            local length = #encoded
+
+            net.WriteUInt(length, 16)
+            net.WriteData(encoded, length)
         end
 
     if CLIENT then
@@ -79,8 +83,8 @@ end
 ]]--
 
 function NETWORK:Send(target)
-    SendMessage(self.name, target, self.buffer)
-    self.buffer = nil
+    SendMessage(self.m_Name, target, self.m_Buffer)
+    self.m_Buffer = nil
 end
 
 --[[
@@ -90,11 +94,11 @@ end
 ]]--
 
 function NETWORK:Listen(func)
-    network.MessageHooks[self.name] = func
+    network.MessageHooks[self.m_Name] = func
 end
 
-local message_name = nil
-local message_args = nil
+local g_Name = nil
+local g_Buffer = nil
 
 --[[
     Name: network.StartMessage(name)
@@ -103,7 +107,7 @@ local message_args = nil
 ]]--
 
 function network.StartMessage(name)
-    message_name = name
+    g_Name = name
 end
 
 --[[
@@ -113,12 +117,12 @@ end
 ]]--
 
 function network.WriteMessage(value)
-    if message_name then
-        if not message_args then
-            message_args = {}
+    if g_Name then
+        if not g_Name then
+            g_Buffer = {}
         end
 
-        table.insert(message_args, value)
+        table.insert(g_Buffer, value)
 
     else
         error("GM-Networking: 'network.StartMessage' wasn't called")
@@ -132,11 +136,11 @@ end
 ]]--
 
 function network.SendMessage(target)
-    if message_name then
-        network.CallMessage(message_name, target, unpack(message_args or {}))
+    if g_Name then
+        SendMessage(g_Name, target, g_Buffer)
 
-        message_name = nil
-        message_args = nil
+        g_Name = nil
+        g_Buffer = nil
 
     else
         error("GM-Networking: 'network.StartMessage' wasn't called")
@@ -153,9 +157,9 @@ function network.CallMessage(name, target, ...)
     local args = {...}
     local buffer = nil
     if #args > 0 then
-        buffer = NetworkBuffer()
+        buffer = {}
         for _, value in ipairs(args) do
-            buffer:Write(value)
+            table.insert(buffer, value)
         end
     end
 
@@ -181,7 +185,8 @@ net.Receive("network_message_trans", function (length, ply)
     if network.MessageHooks[name] then
         local variables = {}
         if net.ReadBit() == 1 then
-            variables = network.ReadBuffer(true)
+            local data = net.ReadData(net.ReadUInt(16))
+            variables = serialize.Decode(data)
         end
 
         network.MessageHooks[name](length, ply, unpack(variables))
